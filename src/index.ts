@@ -66,8 +66,15 @@ async function sendDocument(token, chat_id, thread_id, reply_params, caption, at
      });
 }
 
-async function handleAttachments(env, email, mailId, replyParameters) {
-    if (!email.attachments || email.attachments.length === 0) {
+/**
+ * 在后台处理附件的函数。
+ * @param {object} env - 环境变量.
+ * @param {object} email2 - 解析后的邮件对象.
+ * @param {string} mailId - 邮件的唯一ID.
+ * @param {object | null} replyParameters - 回复参数，用于将附件回复到主消息.
+ */
+async function handleAttachments(env, email2, mailId, replyParameters) {
+    if (!email2.attachments || email2.attachments.length === 0) {
         return;
     }
 
@@ -75,13 +82,13 @@ async function handleAttachments(env, email, mailId, replyParameters) {
     const TELEGRAM_CHAT_ID = env.CHAT_ID;
     const THREAD_ID = env.THREAD_ID || null;
 
-    const attachmentProcessingPromises = email.attachments.map(async (attachment) => {
+    const attachmentProcessingPromises = email2.attachments.map(async (attachment) => {
         const attachmentSizeMB = (attachment.content.byteLength / 1024 / 1024).toFixed(2);
         const caption = `${mailId}\n${attachment.filename || 'Attachment'}`;
 
         if (attachment.content.byteLength > MAX_TELEGRAM_ATTACHMENT_SIZE_BYTES) {
             console.error(`Attachment "${attachment.filename || 'Unnamed'}" is too large (${attachmentSizeMB} MB), skipping.`);
-            const oversizedAttachmentMessage = `${mailId}\n来自 ${email.from.address} 的附件 "${attachment.filename || '无名附件'}" (${attachmentSizeMB} MB) 因超过50MB大小限制而无法转发。`;
+            const oversizedAttachmentMessage = `${mailId}\n来自 ${email2.from.address} 的附件 "${attachment.filename || '无名附件'}" (${attachmentSizeMB} MB) 因超过50MB大小限制而无法转发。`;
             await sendMessage(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, oversizedAttachmentMessage, THREAD_ID);
             return; // 跳过此附件
         }
@@ -90,18 +97,18 @@ async function handleAttachments(env, email, mailId, replyParameters) {
         if (!docResponse.ok) {
             const errorText = await docResponse.text();
             console.error(`Failed to send attachment ${attachment.filename || ''}:`, errorText);
-            await sendMessage(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `${mailId}\n来自 ${email.from.address} 的附件 ${attachment.filename || '之一'} 转发失败了，请登录邮箱查看具体邮件`, THREAD_ID);
+            await sendMessage(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `${mailId}\n来自 ${email2.from.address} 的附件 ${attachment.filename || '之一'} 转发失败了，请登录邮箱查看具体邮件`, THREAD_ID);
         }
     });
 
     // Promise.all 确保所有附件都处理完毕后，waitUntil 的 promise 才算完成
     await Promise.all(attachmentProcessingPromises);
-    console.log(`Finished processing ${email.attachments.length} attachments for mail ${mailId}.`);
+    console.log(`Finished processing ${email2.attachments.length} attachments for mail ${mailId}.`);
 }
 
 
 export default {
-	async email(message, env, ctx): Promise<void> {
+	async email2(message, env, ctx): Promise<void> {
 	    if (!env.BOT_TOKEN || !env.CHAT_ID) {
             console.error('CRITICAL ERROR: BOT_TOKEN or CHAT_ID environment variable is not set.');
             // 如果环境变量缺失，Worker 将无法工作，直接返回即可
@@ -112,20 +119,20 @@ export default {
 		const THREAD_ID = env.THREAD_ID || null; // 支持一下super_group的topic特性
 		
 	    // 先转发以免后续未知的错误导致转发出现问题
-	    if(env.FORWARDING_EMAIL){
-            ctx.waitUntil(message.forward(env.FORWARDING_EMAIL));
+	    if(env.FORWARDING_email2){
+            ctx.waitUntil(message.forward(env.FORWARDING_email2));
         }
 		
         //cloudflare免费版有内存大小限制，如果邮件过大使用PostalMime会直接崩溃
 	    if(message.size > EXCESSIVE_MAIL_SIZE_BYTES){
-	        console.error(`Email from ${message.from} dropped due to excessive size: ${(message.size / 1024 / 1024).toFixed(2)} MB`);
+	        console.error(`email2 from ${message.from} dropped due to excessive size: ${(message.size / 1024 / 1024).toFixed(2)} MB`);
 	        await sendMessage(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `来自${message.from}的邮件因体积过大而转发失败，请登录邮箱查看具体邮件`, THREAD_ID);
 	        return;
 	    }
         try {
-            const email = await PostalMime.parse(message.raw);
+            const email2 = await PostalMime.parse(message.raw);
         } catch(e) {
-            console.error('Failed to parse email:', error);
+            console.error('Failed to parse email2:', e);
             await sendMessage(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `来自${message.from}的邮件解析失败，请登录邮箱查看具体邮件`, THREAD_ID);
             return ;
         }
@@ -136,11 +143,11 @@ export default {
 
 		const telegramMessage = `
 ${mailId}
-From: ${email.from.address} (${email.from.name || 'No Name'})
-To: ${email.to ? email.to.map(addr => addr.address).join(', ') : 'No To Address'}
-Subject: ${email.subject}
+From: ${email2.from.address} (${email2.from.name || 'No Name'})
+To: ${email2.to ? email2.to.map(addr => addr.address).join(', ') : 'No To Address'}
+Subject: ${email2.subject}
 
-${email.text ?? htmlToText(email.html ?? '')}
+${email2.text ?? htmlToText(email2.html ?? '')}
 		`;
 		
 
@@ -148,7 +155,7 @@ ${email.text ?? htmlToText(email.html ?? '')}
 
 		if (!response.ok) {
 			console.error('Failed to send message to Telegram', await response.text());
-			await sendMessage(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `来自${email.from.address}的消息转发失败了，请登录邮箱查看具体邮件`, THREAD_ID);
+			await sendMessage(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `来自${email2.from.address}的消息转发失败了，请登录邮箱查看具体邮件`, THREAD_ID);
 			return ;// 主邮件发送失败直接终止执行，不发附件
 		}
 		console.log('ok');
@@ -166,7 +173,7 @@ ${email.text ?? htmlToText(email.html ?? '')}
         
 		// 发送附件到 Telegram
 		const replyParameters = messageId ? { message_id: messageId } : null;
-		ctx.waitUntil(handleAttachments(env, email, mailId, replyParameters)); // 用ctx.waitUntil() 开子进程防止发送附件时间太长导致主进程超时而终止执行
+		ctx.waitUntil(handleAttachments(env, email2, mailId, replyParameters)); // 用ctx.waitUntil() 开子进程防止发送附件时间太长导致主进程超时而终止执行
 
 	}
 } satisfies ExportedHandler<Env>;
