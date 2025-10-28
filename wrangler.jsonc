@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "email-to-telegram-workers",
+	"name": "email-to-telegram",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-05-29",
 	"observability": {
