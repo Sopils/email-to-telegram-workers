@@ -3,10 +3,10 @@
 // Runtime types generated with workerd@1.20250523.0 2025-05-29 
 declare namespace Cloudflare {
 	interface Env {
-		FORWARDING_EMAIL: "nihaocun20001225@gmail.com";
+		FORWARDING_EMAIL: "nihaocun20001225@gmail.comm";
 		BOT_TOKEN: string;
 		CHAT_ID: string;
-		"nihaocun20001225@gmail.com": SendEmail;
+		"nihaocun20001225@gmail.comm": SendEmail;
 	}
 }
 interface Env extends Cloudflare.Env {}
