@@ -9,6 +9,7 @@
 	"vars": {
 		"FORWARDING_EMAIL": "",
 		"CHAT_ID": "",
-		"THREAD_ID": ""
+		"THREAD_ID": "",
+		"BOT_TOKEN": ""
 	}
 }
