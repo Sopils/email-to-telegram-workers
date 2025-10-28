@@ -131,7 +131,7 @@ export default {
 	        return;
 	    }
         try {
-            const email = await PostalMime.parse(message.raw);
+            email = await PostalMime.parse(message.raw);
         } catch(e) {
             console.error('Failed to parse email:', e);
             await sendMessage(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `来自${message.from}的邮件解析失败，请登录邮箱查看具体邮件`, THREAD_ID);
