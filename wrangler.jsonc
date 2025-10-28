@@ -6,12 +6,8 @@
 	"observability": {
 		"enabled": true
 	},
-	"send_email": [
-		{
-			"name": "yanren1225@gmail.com"
-		}
-	],
 	"vars": {
-		"FORWARDING_EMAIL": "yanren1225@gmail.com"
+		"FORWARDING_EMAIL": "",
+		"CHAT_ID": ""
 	}
 }
