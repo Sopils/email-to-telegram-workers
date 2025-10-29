@@ -31,7 +31,8 @@ async function sendMessage(token, chat_id, msg, thread_id){
     }
     const payload = {
 		chat_id: chat_id,
-		text: msg
+		text: msg,
+		parse_mode: "HTML"
 	}
     if (thread_id) {
         payload.message_thread_id = thread_id;
@@ -66,13 +67,6 @@ async function sendDocument(token, chat_id, thread_id, reply_params, caption, at
      });
 }
 
-/**
- * 在后台处理附件的函数。
- * @param {object} env - 环境变量.
- * @param {object} email - 解析后的邮件对象.
- * @param {string} mailId - 邮件的唯一ID.
- * @param {object | null} replyParameters - 回复参数，用于将附件回复到主消息.
- */
 async function handleAttachments(env, email, mailId, replyParameters) {
     if (!email.attachments || email.attachments.length === 0) {
         return;
@@ -106,6 +100,57 @@ async function handleAttachments(env, email, mailId, replyParameters) {
     console.log(`Finished processing ${email.attachments.length} attachments for mail ${mailId}.`);
 }
 
+function URLproc(Text){
+  // 预处理
+  if (typeof Text !== 'string') {
+    return "";
+  }
+  const htmlEntities = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;'
+  };
+  const preprocessedText = Text.replace(/[&<>]/g, (char) => {
+    return htmlEntities[char];
+  });
+
+  const urlRegex = /(?:(?:[a-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[\-\+=&;%@.\w_]*)#?(?:[.!\/\\\w]*))?/gi;
+  const newText = preprocessedText.replace(urlRegex, (matchedUrl) => {
+    // a. 检查匹配到的URL的长度是否需要替换
+    if (matchedUrl && matchedUrl.length > 20) {
+      let linkText = "点击链接"; // 设置默认的链接文本
+  
+      // b. 尝试从URL中提取文件名
+      try {
+        // 为了准确提取，先去掉URL末尾的查询参数和哈希值
+        const cleanUrl = matchedUrl.split('?')[0].split('#')[0];
+        
+        // 查找最后一个斜杠 '/' 的位置
+        const lastSlashIndex = cleanUrl.lastIndexOf('/');
+  
+        // 如果找到了斜杠，并且它不是URL的最后一个字符
+        if (lastSlashIndex !== -1 && lastSlashIndex < cleanUrl.length - 1) {
+          const potentialFilename = cleanUrl.substring(lastSlashIndex + 1);
+          
+          // 一个简单的判断：如果提取的部分包含'.'，我们就认为它是一个文件名
+          if (potentialFilename && potentialFilename.includes('.')) {
+            linkText = potentialFilename;
+          }
+        }
+      } catch (e) {
+        // 如果解析出错，则保持使用默认文本，这能确保代码的健壮性
+        console.error("解析URL时出错:", e);
+      }
+      
+      // c. 返回最终的<a>标签字符串
+      return `<a href="${matchedUrl}">${linkText}</a>`;
+    } else {
+      // d. 如果URL长度未超过20，则不进行任何更改
+      return matchedUrl;
+    }
+  });
+  return newText;
+}
 
 export default {
 	async email(message, env, ctx): Promise<void> {
@@ -148,7 +193,7 @@ From: ${email.from.address} (${email.from.name || 'No Name'})
 To: ${email.to ? email.to.map(addr => addr.address).join(', ') : 'No To Address'}
 Subject: ${email.subject}
 
-${email.text ?? htmlToText(email.html ?? '')}
+${URLproc(email.text ?? convert(email.html ?? ""))}
 		`;
 		
 
